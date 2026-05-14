@@ -229,8 +229,8 @@ ui.layout(
     </vertical>
 );
 
-ui.statusBarColor(0xFF1a1a1a);
-ui.backgroundColor(0xFF1a1a1a);
+ui.statusBarColor("#1a1a1a");
+ui.backgroundColor("#1a1a1a");
 
 ui.startBtn.on("click", () => {
     if (!stats.running) {
