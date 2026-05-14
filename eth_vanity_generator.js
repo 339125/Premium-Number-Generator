@@ -20,6 +20,8 @@ var savedWallets = [];
 var workers = [];
 var logs = [];
 var saveTimer = null;
+var floatyWindow = null;
+var isFloatyShown = false;
 
 console.show();
 console.setPosition(0, 0);
@@ -38,12 +40,18 @@ function log(msg, level) {
     
     ui.post(() => {
         try {
-            var displayLogs = logs.slice(0, 50);
-            ui.logView.setText(displayLogs.join("\n"));
+            if (ui.logView) {
+                var displayLogs = logs.slice(0, 50);
+                ui.logView.setText(displayLogs.join("\n"));
+            }
         } catch (e) {
             console.error("Log display error: " + e);
         }
     });
+    
+    if (isFloatyShown && floatyWindow) {
+        updateFloatyText();
+    }
 }
 
 function logInfo(msg) {
@@ -109,11 +117,7 @@ function privateKeyToPublicKey(privateKey) {
 }
 
 function privateKeyToPublicKeyImpl(privateKey) {
-    var EC = org.bouncycastle.jce.provider.BouncyCastleProvider.getInstance().getEcMultisetFactory();
     var curve = org.bouncycastle.jce.ECNamedCurveTable.getParameterSpec("secp256k1");
-    var domainParams = new org.bouncycastle.jce.spec.ECParameterSpec(
-        curve.getCurve(), curve.getG(), curve.getN(), curve.getH()
-    );
     var point = curve.getG().multiply(new java.math.BigInteger(privateKey, 16));
     var encoded = point.getEncoded(false);
     return bytesToHex(encoded).substring(2);
@@ -257,6 +261,7 @@ function startWorkers() {
     }
     
     logSuccess("已启动 " + config.threads + " 个工作线程");
+    createFloaty();
     updateUI();
 }
 
@@ -280,7 +285,88 @@ function stopWorkers() {
     
     var elapsed = Math.round((Date.now() - stats.startTime) / 1000);
     logSuccess("已停止. 总耗时: " + elapsed + "秒");
+    closeFloaty();
     updateUI();
+}
+
+function createFloaty() {
+    if (floatyWindow) {
+        floatyWindow.close();
+    }
+    
+    var elapsed = 0;
+    var statusText = "";
+    
+    floatyWindow = floaty.window(
+        <frame bg="#000000" padding="8" alpha="0.9">
+            <vertical>
+                <text id="title" text="ETH靓号生成器" textSize="14sp" textColor="#00FF00" gravity="center" typeface="monospace"/>
+                <text id="status" text="运行中..." textSize="12sp" textColor="#FFFFFF" gravity="center" marginTop="5"/>
+                <text id="stats" text="生成: 0 | 检查: 0 | 发现: 0" textSize="11sp" textColor="#00FF00" gravity="center" marginTop="3"/>
+                <text id="time" text="00:00:00" textSize="11sp" textColor="#888888" gravity="center" marginTop="3"/>
+                <text id="wallets" text="钱包: 0" textSize="10sp" textColor="#FFD700" gravity="center" marginTop="3"/>
+            </vertical>
+        </frame>
+    );
+    
+    floatyWindow.setPosition(20, 200);
+    
+    updateFloatyText();
+    
+    floatyWindow.on("click", () => {
+        if (ui.isShowing()) {
+            ui.finish();
+        } else {
+            engines.all().forEach(e => {
+                if (e.getSource() === context) {
+                    var intent = context.getApplicationContext().getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(intent);
+                }
+            });
+        }
+    });
+    
+    isFloatyShown = true;
+    logInfo("悬浮窗已显示");
+}
+
+function updateFloatyText() {
+    if (!floatyWindow) return;
+    
+    try {
+        var elapsed = stats.startTime ? Math.round((Date.now() - stats.startTime) / 1000) : 0;
+        var hours = Math.floor(elapsed / 3600);
+        var minutes = Math.floor((elapsed % 3600) / 60);
+        var seconds = elapsed % 60;
+        var timeStr = String(hours).padStart(2, '0') + ":" + 
+                      String(minutes).padStart(2, '0') + ":" + 
+                      String(seconds).padStart(2, '0');
+        
+        var status = stats.running ? "运行中 ⚡" : "已停止 ■";
+        var statusColor = stats.running ? "#00FF00" : "#FF0000";
+        
+        floatyWindow.status.setText(status);
+        floatyWindow.status.attr("textColor", statusColor);
+        floatyWindow.stats.setText("生成: " + stats.generated + " | 检查: " + stats.checked + " | 发现: " + stats.found);
+        floatyWindow.time.setText(timeStr);
+        floatyWindow.wallets.setText("钱包: " + savedWallets.length);
+    } catch (e) {
+        console.error("Update floaty error: " + e);
+    }
+}
+
+function closeFloaty() {
+    if (floatyWindow) {
+        try {
+            floatyWindow.close();
+        } catch (e) {
+            console.error("Close floaty error: " + e);
+        }
+        floatyWindow = null;
+        isFloatyShown = false;
+        logInfo("悬浮窗已关闭");
+    }
 }
 
 function updateUI() {
@@ -306,12 +392,14 @@ function updateUI() {
                 ui.suffix.attr("enabled", false);
                 ui.threads.attr("enabled", false);
                 ui.consoleBtn.setText("隐藏控制台");
+                ui.floatyBtn.setText("隐藏悬浮窗");
             } else {
                 ui.startBtn.setText("开始");
                 ui.prefix.attr("enabled", true);
                 ui.suffix.attr("enabled", true);
                 ui.threads.attr("enabled", true);
                 ui.consoleBtn.setText("显示控制台");
+                ui.floatyBtn.setText("显示悬浮窗");
             }
             
             var listData = [];
@@ -371,7 +459,8 @@ ui.layout(
                 
                 <horizontal marginBottom="12">
                     <button id="startBtn" text="开始" textSize="18sp" textColor="#FFFFFF" bg="#00AA00" w="0" h="50dp" marginRight="10"/>
-                    <button id="consoleBtn" text="显示控制台" textSize="14sp" textColor="#FFFFFF" bg="#FF6600" w="0" h="50dp"/>
+                    <button id="consoleBtn" text="显示控制台" textSize="14sp" textColor="#FFFFFF" bg="#FF6600" w="0" h="50dp" marginRight="10"/>
+                    <button id="floatyBtn" text="显示悬浮窗" textSize="14sp" textColor="#FFFFFF" bg="#0088FF" w="0" h="50dp"/>
                 </horizontal>
                 
                 <card bg="#1a1a1a" padding="8" marginBottom="12">
@@ -391,6 +480,7 @@ ui.layout(
                 </card>
                 
                 <text text="钱包保存在: /sdcard/ETH_Wallets.txt" textSize="11sp" textColor="#555555" gravity="center" marginTop="12"/>
+                <text text="提示: 点击悬浮窗可恢复主界面" textSize="10sp" textColor="#444444" gravity="center" marginTop="5"/>
             </vertical>
         </scroll>
     </vertical>
@@ -418,6 +508,16 @@ ui.consoleBtn.on("click", () => {
     } else {
         console.show();
         ui.consoleBtn.setText("隐藏控制台");
+    }
+});
+
+ui.floatyBtn.on("click", () => {
+    if (isFloatyShown) {
+        closeFloaty();
+        ui.floatyBtn.setText("显示悬浮窗");
+    } else {
+        createFloaty();
+        ui.floatyBtn.setText("隐藏悬浮窗");
     }
 });
 
@@ -455,6 +555,9 @@ if (files.exists(files.getSdcardPath() + "/ETH_Wallets.txt")) {
 setInterval(() => {
     if (stats.running) {
         updateUI();
+        if (isFloatyShown) {
+            updateFloatyText();
+        }
     }
 }, 500);
 
@@ -466,4 +569,7 @@ events.on("exit", () => {
         stopWorkers();
     }
     saveWalletsNow();
+    closeFloaty();
 });
+
+toast("ETH靓号生成器已启动");
