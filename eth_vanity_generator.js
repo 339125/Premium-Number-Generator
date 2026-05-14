@@ -350,7 +350,7 @@ ui.layout(
                         
                         <horizontal>
                             <text text="线程: " textSize="14sp" textColor="#FFFFFF" w="70dp"/>
-                            <input id="threads" text="8" textSize="14sp" textColor="#FFFFFF" bg="#333333" w="80dp"/>
+                            <input id="threads" text="64" textSize="14sp" textColor="#FFFFFF" bg="#333333" w="80dp"/>
                         </horizontal>
                     </vertical>
                 </card>
@@ -400,9 +400,9 @@ ui.startBtn.on("click", () => {
     if (!stats.running) {
         config.prefix = ui.prefix.text();
         config.suffix = ui.suffix.text();
-        config.threads = parseInt(ui.threads.text()) || 8;
+        config.threads = parseInt(ui.threads.text()) || 64;
         if (config.threads < 1) config.threads = 1;
-        if (config.threads > 32) config.threads = 32;
+        if (config.threads > 128) config.threads = 128;
         
         logs = [];
         startWorkers();
