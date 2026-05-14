@@ -458,9 +458,9 @@ ui.layout(
                 </card>
                 
                 <horizontal marginBottom="12">
-                    <button id="startBtn" text="开始" textSize="18sp" textColor="#FFFFFF" bg="#00AA00" w="0" h="50dp" marginRight="10"/>
-                    <button id="consoleBtn" text="显示控制台" textSize="14sp" textColor="#FFFFFF" bg="#FF6600" w="0" h="50dp" marginRight="10"/>
-                    <button id="floatyBtn" text="显示悬浮窗" textSize="14sp" textColor="#FFFFFF" bg="#0088FF" w="0" h="50dp"/>
+                    <button id="startBtn" text="开始" textSize="18sp" textColor="#FFFFFF" bg="#00AA00" w="*" h="50dp" marginRight="10"/>
+                    <button id="consoleBtn" text="显示控制台" textSize="14sp" textColor="#FFFFFF" bg="#FF6600" w="*" h="50dp" marginRight="10"/>
+                    <button id="floatyBtn" text="显示悬浮窗" textSize="14sp" textColor="#FFFFFF" bg="#0088FF" w="*" h="50dp"/>
                 </horizontal>
                 
                 <card bg="#1a1a1a" padding="8" marginBottom="12">
