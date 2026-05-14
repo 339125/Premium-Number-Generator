@@ -243,11 +243,11 @@ function createFloaty() {
     if (floatyWindow) floatyWindow.close();
     
     floatyWindow = floaty.window(
-        <vertical bg="#000000" padding="8">
-            <text id="title" text="ETH靓号" textSize="14sp" textColor="#00FF00"/>
-            <text id="status" text="运行中" textSize="12sp" textColor="#00FF00"/>
-            <text id="stats" text="生成:0 检查:0 发现:0" textSize="11sp" textColor="#FFFFFF"/>
-            <text id="wallets" text="钱包:0" textSize="10sp" textColor="#FFD700"/>
+        <vertical bg="#FF000000" padding="8">
+            <text id="title" text="ETH靓号" textSize="14sp" textColor="#FF00FF00"/>
+            <text id="status" text="运行中" textSize="12sp" textColor="#FF00FF00"/>
+            <text id="stats" text="生成:0 检查:0 发现:0" textSize="11sp" textColor="#FFFFFFFF"/>
+            <text id="wallets" text="钱包:0" textSize="10sp" textColor="#FFFFFF00"/>
         </vertical>
     );
     
@@ -322,28 +322,28 @@ function updateUI() {
 }
 
 ui.layout(
-    <vertical bg="#000000">
-        <text text="ETH靓号生成器" textSize="24sp" textColor="#00FF00" gravity="center" margin="10dp"/>
+    <vertical bg="#FF000000">
+        <text text="ETH靓号生成器" textSize="24sp" textColor="#FF00FF00" gravity="center" margin="10dp"/>
         
-        <text text="设置" textSize="16sp" textColor="#888888" marginTop="10dp"/>
+        <text text="设置" textSize="16sp" textColor="#FF888888" marginTop="10dp"/>
         
         <horizontal>
-            <text text="前缀:" textSize="14sp" textColor="#FFF" w="60dp"/>
+            <text text="前缀:" textSize="14sp" textColor="#FFFFFFFF" w="60dp"/>
             <input id="prefix" hint="1111" textSize="14sp" w="100dp"/>
-            <text text="后缀:" textSize="14sp" textColor="#FFF" w="60dp"/>
+            <text text="后缀:" textSize="14sp" textColor="#FFFFFFFF" w="60dp"/>
             <input id="suffix" hint="8888" textSize="14sp" w="100dp"/>
         </horizontal>
         
         <horizontal marginTop="10dp">
-            <text text="线程:" textSize="14sp" textColor="#FFF" w="60dp"/>
+            <text text="线程:" textSize="14sp" textColor="#FFFFFFFF" w="60dp"/>
             <input id="threads" text="64" textSize="14sp" w="80dp"/>
         </horizontal>
         
         <horizontal marginTop="10dp">
-            <text id="generated" text="生成:0" textSize="14sp" textColor="#0F0" w="80dp"/>
-            <text id="checked" text="检查:0" textSize="14sp" textColor="#0F0" w="80dp"/>
-            <text id="found" text="发现:0" textSize="14sp" textColor="#FF0" w="80dp"/>
-            <text id="foundCount" text="钱包:0" textSize="14sp" textColor="#F80" w="80dp"/>
+            <text id="generated" text="生成:0" textSize="14sp" textColor="#FF00FF00" w="80dp"/>
+            <text id="checked" text="检查:0" textSize="14sp" textColor="#FF00FF00" w="80dp"/>
+            <text id="found" text="发现:0" textSize="14sp" textColor="#FFFFFF00" w="80dp"/>
+            <text id="foundCount" text="钱包:0" textSize="14sp" textColor="#FFFF8800" w="80dp"/>
         </horizontal>
         
         <horizontal marginTop="10dp">
@@ -352,15 +352,15 @@ ui.layout(
             <button id="floatyBtn" text="悬浮窗" textSize="14sp" w="80dp" h="50dp"/>
         </horizontal>
         
-        <text text="日志" textSize="14sp" textColor="#888" marginTop="10dp"/>
+        <text text="日志" textSize="14sp" textColor="#FF888888" marginTop="10dp"/>
         <scroll h="150dp">
-            <text id="logView" text="准备就绪..." textSize="11sp" textColor="#0F0"/>
+            <text id="logView" text="准备就绪..." textSize="11sp" textColor="#FF00FF00"/>
         </scroll>
         
-        <text text="已保存钱包" textSize="14sp" textColor="#888" marginTop="10dp"/>
+        <text text="已保存钱包" textSize="14sp" textColor="#FF888888" marginTop="10dp"/>
         <list id="walletList" h="150dp"/>
         
-        <text text="保存:/sdcard/ETH_Wallets.txt" textSize="10sp" textColor="#555" gravity="center" marginTop="5dp"/>
+        <text text="保存:/sdcard/ETH_Wallets.txt" textSize="10sp" textColor="#FF555555" gravity="center" marginTop="5dp"/>
     </vertical>
 );
 
