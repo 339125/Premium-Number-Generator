@@ -1,4 +1,4 @@
-'use ui';
+'ui';
 
 var config = {
     prefix: "",
@@ -141,40 +141,46 @@ function stopWorkers() {
 }
 
 function updateUI() {
-    ui.run(() => {
-        ui.generated.setText("已生成: " + stats.generated);
-        ui.checked.setText("已检查: " + stats.checked);
-        ui.found.setText("已发现: " + stats.found);
-        
-        if (stats.running) {
-            ui.startBtn.setText("停止");
-            ui.prefix.setEnabled(false);
-            ui.suffix.setEnabled(false);
-            ui.threads.setEnabled(false);
-        } else {
-            ui.startBtn.setText("开始");
-            ui.prefix.setEnabled(true);
-            ui.suffix.setEnabled(true);
-            ui.threads.setEnabled(true);
+    ui.post(() => {
+        try {
+            ui.generated.setText("已生成: " + stats.generated);
+            ui.checked.setText("已检查: " + stats.checked);
+            ui.found.setText("已发现: " + stats.found);
+            
+            if (stats.running) {
+                ui.startBtn.setText("停止");
+                ui.prefix.attr("enabled", false);
+                ui.suffix.attr("enabled", false);
+                ui.threads.attr("enabled", false);
+            } else {
+                ui.startBtn.setText("开始");
+                ui.prefix.attr("enabled", true);
+                ui.suffix.attr("enabled", true);
+                ui.threads.attr("enabled", true);
+            }
+            
+            var listData = [];
+            savedWallets.forEach((w, i) => {
+                listData.push((i + 1) + ". " + w.address + " | " + w.balance + " ETH");
+            });
+            
+            var adapter = new android.widget.ArrayAdapter(context, android.R.layout.simple_list_item_1, listData);
+            ui.walletList.setAdapter(adapter);
+        } catch (e) {
+            console.error("UI update error: " + e);
         }
-        
-        var listData = [];
-        savedWallets.forEach((w, i) => {
-            listData.push((i + 1) + ". " + w.address + " | " + w.balance + " ETH");
-        });
-        ui.walletList.setAdapter(android.widget.ArrayAdapter(
-            context,
-            android.R.layout.simple_list_item_1,
-            listData
-        ));
     });
 }
 
 function log(msg) {
     logs.unshift("[" + new Date().toLocaleTimeString() + "] " + msg);
     if (logs.length > 100) logs.pop();
-    ui.run(() => {
-        ui.logView.setText(logs.join("\n"));
+    ui.post(() => {
+        try {
+            ui.logView.setText(logs.join("\n"));
+        } catch (e) {
+            console.error("Log error: " + e);
+        }
     });
 }
 
@@ -231,9 +237,9 @@ ui.layout(
 
 ui.startBtn.on("click", () => {
     if (!stats.running) {
-        config.prefix = ui.prefix.getText().toString();
-        config.suffix = ui.suffix.getText().toString();
-        config.threads = parseInt(ui.threads.getText().toString()) || 4;
+        config.prefix = ui.prefix.text();
+        config.suffix = ui.suffix.text();
+        config.threads = parseInt(ui.threads.text()) || 4;
         stats.generated = 0;
         stats.checked = 0;
         stats.found = 0;
