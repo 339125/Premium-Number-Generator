@@ -229,9 +229,6 @@ ui.layout(
     </vertical>
 );
 
-ui.statusBarColor("#1a1a1a");
-ui.backgroundColor("#1a1a1a");
-
 ui.startBtn.on("click", () => {
     if (!stats.running) {
         config.prefix = ui.prefix.getText().toString();
