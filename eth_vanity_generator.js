@@ -1,3 +1,5 @@
+'use ui';
+
 var config = {
     prefix: "",
     suffix: "",
