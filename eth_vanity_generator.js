@@ -3,7 +3,7 @@
 var config = {
     prefix: "",
     suffix: "",
-    threads: 4,
+    threads: 64,
     rpcUrl: "https://eth-mainnet.g.alchemy.com/v2/demo",
     maxRetries: 3
 };
@@ -41,34 +41,18 @@ function log(msg, level) {
     ui.post(() => {
         try {
             if (ui.logView) {
-                var displayLogs = logs.slice(0, 50);
+                var displayLogs = logs.slice(0, 30);
                 ui.logView.setText(displayLogs.join("\n"));
             }
         } catch (e) {
-            console.error("Log display error: " + e);
+            console.error("Log error: " + e);
         }
     });
-    
-    if (isFloatyShown && floatyWindow) {
-        updateFloatyText();
-    }
 }
 
-function logInfo(msg) {
-    log(msg, "info");
-}
-
-function logSuccess(msg) {
-    log(msg, "success");
-}
-
-function logError(msg) {
-    log(msg, "error");
-}
-
-function logWarning(msg) {
-    log(msg, "warning");
-}
+function logInfo(msg) { log(msg, "info"); }
+function logSuccess(msg) { log(msg, "success"); }
+function logError(msg) { log(msg, "error"); }
 
 function sha3(data) {
     var buffer = data instanceof ArrayBuffer ? data : (typeof data === 'string' ? new TextEncoder().encode(data) : data);
@@ -112,15 +96,10 @@ function privateKeyToPublicKey(privateKey) {
         var publicPoint = w.multiply(new org.bouncycastle.math.BigInteger(privateKey, 16));
         return bytesToHex(publicPoint.getEncoded(false)).substring(2);
     } catch (e) {
-        return privateKeyToPublicKeyImpl(privateKey);
+        var curve = org.bouncycastle.jce.ECNamedCurveTable.getParameterSpec("secp256k1");
+        var point = curve.getG().multiply(new java.math.BigInteger(privateKey, 16));
+        return bytesToHex(point.getEncoded(false)).substring(2);
     }
-}
-
-function privateKeyToPublicKeyImpl(privateKey) {
-    var curve = org.bouncycastle.jce.ECNamedCurveTable.getParameterSpec("secp256k1");
-    var point = curve.getG().multiply(new java.math.BigInteger(privateKey, 16));
-    var encoded = point.getEncoded(false);
-    return bytesToHex(encoded).substring(2);
 }
 
 function publicKeyToAddress(publicKey) {
@@ -150,9 +129,6 @@ function checkBalance(address) {
             return 0;
         } catch (e) {
             retries++;
-            if (retries >= config.maxRetries) {
-                logError("余额查询失败: " + address);
-            }
             sleep(100);
         }
     }
@@ -167,49 +143,37 @@ function saveWallet(privateKey, address, balance) {
         timestamp: new Date().toLocaleString()
     };
     savedWallets.push(wallet);
-    
     scheduleSaveWallets();
-    
-    logSuccess("发现有钱包! 地址: " + address + " 余额: " + balance.toFixed(8) + " ETH");
+    logSuccess("发现钱包! " + address + " = " + balance.toFixed(8) + " ETH");
 }
 
 function scheduleSaveWallets() {
-    if (saveTimer) {
-        return;
-    }
+    if (saveTimer) return;
     
     saveTimer = threads.start(function() {
         sleep(2000);
-        
         try {
             var content = JSON.stringify(savedWallets, null, 2);
-            var filePath = files.getSdcardPath() + "/ETH_Wallets.txt";
-            files.write(filePath, content);
-            logInfo("钱包已保存到: " + filePath);
+            files.write(files.getSdcardPath() + "/ETH_Wallets.txt", content);
+            logInfo("已保存到 " + files.getSdcardPath() + "/ETH_Wallets.txt");
         } catch (e) {
-            logError("保存钱包失败: " + e.message);
+            logError("保存失败: " + e.message);
         }
-        
         saveTimer = null;
     });
 }
 
 function saveWalletsNow() {
     try {
-        var content = JSON.stringify(savedWallets, null, 2);
-        var filePath = files.getSdcardPath() + "/ETH_Wallets.txt";
-        files.write(filePath, content);
+        files.write(files.getSdcardPath() + "/ETH_Wallets.txt", JSON.stringify(savedWallets, null, 2));
         return true;
     } catch (e) {
-        logError("立即保存失败: " + e.message);
+        logError("保存失败: " + e.message);
         return false;
     }
 }
 
 function generateAndCheck() {
-    var threadId = threads.currentThread().getId();
-    logInfo("线程 " + threadId + " 已启动");
-    
     while (stats.running) {
         try {
             var privateKey = generatePrivateKey();
@@ -223,7 +187,6 @@ function generateAndCheck() {
             
             if (matchPrefix && matchSuffix) {
                 threads.atomicAdd(stats.checked, 1);
-                
                 var balance = checkBalance(address);
                 if (balance > 0) {
                     threads.atomicAdd(stats.found, 1);
@@ -231,19 +194,14 @@ function generateAndCheck() {
                 }
             }
         } catch (e) {
-            logError("生成钱包出错: " + e.message);
+            logError("错误: " + e.message);
         }
-        
         sleep(1);
     }
-    
-    logInfo("线程 " + threadId + " 已停止");
 }
 
 function startWorkers() {
-    if (stats.running) {
-        return;
-    }
+    if (stats.running) return;
     
     stats.running = true;
     stats.startTime = Date.now();
@@ -251,28 +209,22 @@ function startWorkers() {
     stats.checked = 0;
     stats.found = 0;
     
-    logInfo("开始生成靓号钱包...");
-    logInfo("前缀: " + (config.prefix || "无"));
-    logInfo("后缀: " + (config.suffix || "无"));
-    logInfo("线程数: " + config.threads);
+    logInfo("开始生成... 前缀:" + (config.prefix || "无") + " 后缀:" + (config.suffix || "无") + " 线程:" + config.threads);
     
     for (var i = 0; i < config.threads; i++) {
         workers.push(threads.start(generateAndCheck));
     }
     
-    logSuccess("已启动 " + config.threads + " 个工作线程");
+    logSuccess("已启动 " + config.threads + " 线程");
     createFloaty();
     updateUI();
 }
 
 function stopWorkers() {
-    if (!stats.running) {
-        return;
-    }
+    if (!stats.running) return;
     
     stats.running = false;
-    
-    logInfo("正在停止所有线程...");
+    logInfo("正在停止...");
     
     workers.forEach(function(worker) {
         if (worker && worker.isAlive()) {
@@ -282,109 +234,65 @@ function stopWorkers() {
     workers = [];
     
     saveWalletsNow();
-    
-    var elapsed = Math.round((Date.now() - stats.startTime) / 1000);
-    logSuccess("已停止. 总耗时: " + elapsed + "秒");
+    logSuccess("已停止. 耗时:" + Math.round((Date.now() - stats.startTime) / 1000) + "秒");
     closeFloaty();
     updateUI();
 }
 
 function createFloaty() {
-    if (floatyWindow) {
-        floatyWindow.close();
-    }
-    
-    var elapsed = 0;
-    var statusText = "";
+    if (floatyWindow) floatyWindow.close();
     
     floatyWindow = floaty.window(
-        <frame bg="#000000" padding="8" alpha="0.9">
-            <vertical>
-                <text id="title" text="ETH靓号生成器" textSize="14sp" textColor="#00FF00" gravity="center" typeface="monospace"/>
-                <text id="status" text="运行中..." textSize="12sp" textColor="#FFFFFF" gravity="center" marginTop="5"/>
-                <text id="stats" text="生成: 0 | 检查: 0 | 发现: 0" textSize="11sp" textColor="#00FF00" gravity="center" marginTop="3"/>
-                <text id="time" text="00:00:00" textSize="11sp" textColor="#888888" gravity="center" marginTop="3"/>
-                <text id="wallets" text="钱包: 0" textSize="10sp" textColor="#FFD700" gravity="center" marginTop="3"/>
-            </vertical>
-        </frame>
+        <vertical bg="#000000" padding="8">
+            <text id="title" text="ETH靓号" textSize="14sp" textColor="#00FF00"/>
+            <text id="status" text="运行中" textSize="12sp" textColor="#00FF00"/>
+            <text id="stats" text="生成:0 检查:0 发现:0" textSize="11sp" textColor="#FFFFFF"/>
+            <text id="wallets" text="钱包:0" textSize="10sp" textColor="#FFD700"/>
+        </vertical>
     );
     
     floatyWindow.setPosition(20, 200);
-    
     updateFloatyText();
+    isFloatyShown = true;
     
     floatyWindow.on("click", () => {
-        if (ui.isShowing()) {
-            ui.finish();
-        } else {
-            engines.all().forEach(e => {
-                if (e.getSource() === context) {
-                    var intent = context.getApplicationContext().getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                    context.startActivity(intent);
-                }
-            });
-        }
+        engines.all().forEach(e => {
+            if (e.getSource() === context) {
+                var intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+            }
+        });
     });
-    
-    isFloatyShown = true;
-    logInfo("悬浮窗已显示");
 }
 
 function updateFloatyText() {
     if (!floatyWindow) return;
-    
     try {
         var elapsed = stats.startTime ? Math.round((Date.now() - stats.startTime) / 1000) : 0;
-        var hours = Math.floor(elapsed / 3600);
-        var minutes = Math.floor((elapsed % 3600) / 60);
-        var seconds = elapsed % 60;
-        var timeStr = String(hours).padStart(2, '0') + ":" + 
-                      String(minutes).padStart(2, '0') + ":" + 
-                      String(seconds).padStart(2, '0');
+        var timeStr = Math.floor(elapsed / 3600) + ":" + String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0') + ":" + String(elapsed % 60).padStart(2, '0');
         
-        var status = stats.running ? "运行中 ⚡" : "已停止 ■";
-        var statusColor = stats.running ? "#00FF00" : "#FF0000";
-        
-        floatyWindow.status.setText(status);
-        floatyWindow.status.attr("textColor", statusColor);
-        floatyWindow.stats.setText("生成: " + stats.generated + " | 检查: " + stats.checked + " | 发现: " + stats.found);
-        floatyWindow.time.setText(timeStr);
-        floatyWindow.wallets.setText("钱包: " + savedWallets.length);
-    } catch (e) {
-        console.error("Update floaty error: " + e);
-    }
+        floatyWindow.status.setText(stats.running ? "运行中" : "已停止");
+        floatyWindow.stats.setText("生成:" + stats.generated + " 检查:" + stats.checked + " 发现:" + stats.found + " " + timeStr);
+        floatyWindow.wallets.setText("钱包:" + savedWallets.length);
+    } catch (e) {}
 }
 
 function closeFloaty() {
     if (floatyWindow) {
-        try {
-            floatyWindow.close();
-        } catch (e) {
-            console.error("Close floaty error: " + e);
-        }
+        try { floatyWindow.close(); } catch (e) {}
         floatyWindow = null;
         isFloatyShown = false;
-        logInfo("悬浮窗已关闭");
     }
 }
 
 function updateUI() {
     ui.post(() => {
         try {
-            var elapsed = stats.startTime ? Math.round((Date.now() - stats.startTime) / 1000) : 0;
-            var hours = Math.floor(elapsed / 3600);
-            var minutes = Math.floor((elapsed % 3600) / 60);
-            var seconds = elapsed % 60;
-            var timeStr = String(hours).padStart(2, '0') + ":" + 
-                          String(minutes).padStart(2, '0') + ":" + 
-                          String(seconds).padStart(2, '0');
-            
-            ui.generated.setText("已生成: " + stats.generated);
-            ui.checked.setText("已检查: " + stats.checked);
-            ui.found.setText("已发现: " + stats.found);
-            ui.elapsed.setText("耗时: " + timeStr);
-            ui.foundCount.setText("发现钱包: " + savedWallets.length);
+            ui.generated.setText("生成:" + stats.generated);
+            ui.checked.setText("检查:" + stats.checked);
+            ui.found.setText("发现:" + stats.found);
+            ui.foundCount.setText("钱包:" + savedWallets.length);
             
             if (stats.running) {
                 ui.startBtn.setText("停止");
@@ -398,91 +306,61 @@ function updateUI() {
                 ui.prefix.attr("enabled", true);
                 ui.suffix.attr("enabled", true);
                 ui.threads.attr("enabled", true);
-                ui.consoleBtn.setText("显示控制台");
-                ui.floatyBtn.setText("显示悬浮窗");
+                ui.consoleBtn.setText("控制台");
+                ui.floatyBtn.setText("悬浮窗");
             }
             
             var listData = [];
             savedWallets.forEach((w, i) => {
-                listData.push((i + 1) + ". " + w.address.substring(0, 10) + "..." + 
-                             w.address.substring(38) + " | " + w.balance.toFixed(6) + " ETH");
+                listData.push((i + 1) + ". " + w.address + " = " + w.balance.toFixed(6) + " ETH");
             });
-            
-            var adapter = new android.widget.ArrayAdapter(context, android.R.layout.simple_list_item_1, listData);
-            ui.walletList.setAdapter(adapter);
+            ui.walletList.setAdapter(new android.widget.ArrayAdapter(context, android.R.layout.simple_list_item_1, listData));
         } catch (e) {
-            console.error("UI update error: " + e);
+            console.error("UI错误: " + e);
         }
     });
 }
 
 ui.layout(
-    <vertical bg="#000000" padding="0">
-        <scroll h="*">
-            <vertical padding="16">
-                <text text="ETH靓号生成器" textSize="28sp" textColor="#00FF00" gravity="center" marginBottom="16" typeface="monospace"/>
-                
-                <card bg="#1a1a1a" padding="12" marginBottom="12">
-                    <vertical>
-                        <text text="靓号规则设置" textSize="16sp" textColor="#888888" marginBottom="8"/>
-                        
-                        <horizontal marginBottom="8">
-                            <text text="前缀: " textSize="14sp" textColor="#FFFFFF" w="70dp"/>
-                            <input id="prefix" hint="如: 1111" textSize="14sp" textColor="#FFFFFF" bg="#333333" w="150dp"/>
-                        </horizontal>
-                        
-                        <horizontal marginBottom="8">
-                            <text text="后缀: " textSize="14sp" textColor="#FFFFFF" w="70dp"/>
-                            <input id="suffix" hint="如: 8888" textSize="14sp" textColor="#FFFFFF" bg="#333333" w="150dp"/>
-                        </horizontal>
-                        
-                        <horizontal>
-                            <text text="线程: " textSize="14sp" textColor="#FFFFFF" w="70dp"/>
-                            <input id="threads" text="64" textSize="14sp" textColor="#FFFFFF" bg="#333333" w="80dp"/>
-                        </horizontal>
-                    </vertical>
-                </card>
-                
-                <card bg="#1a1a1a" padding="12" marginBottom="12">
-                    <vertical>
-                        <horizontal gravity="center">
-                            <text id="generated" text="已生成: 0" textSize="14sp" textColor="#00FF00" marginRight="15"/>
-                            <text id="checked" text="已检查: 0" textSize="14sp" textColor="#00FF00" marginRight="15"/>
-                            <text id="found" text="已发现: 0" textSize="14sp" textColor="#FFD700"/>
-                        </horizontal>
-                        <horizontal gravity="center" marginTop="5">
-                            <text id="elapsed" text="耗时: 00:00:00" textSize="12sp" textColor="#888888" marginRight="15"/>
-                            <text id="foundCount" text="发现钱包: 0" textSize="12sp" textColor="#888888"/>
-                        </horizontal>
-                    </vertical>
-                </card>
-                
-                <horizontal marginBottom="12">
-                    <button id="startBtn" text="开始" textSize="18sp" w="100dp" h="50dp" marginRight="10dp"/>
-                    <button id="consoleBtn" text="控制台" textSize="14sp" w="80dp" h="50dp" marginRight="10dp"/>
-                    <button id="floatyBtn" text="悬浮窗" textSize="14sp" w="80dp" h="50dp"/>
-                </horizontal>
-                
-                <card bg="#1a1a1a" padding="8" marginBottom="12">
-                    <vertical>
-                        <text text="运行日志" textSize="14sp" textColor="#888888" marginBottom="5"/>
-                        <scroll h="200dp">
-                            <text id="logView" text="" textSize="11sp" textColor="#00FF00" typeface="monospace"/>
-                        </scroll>
-                    </vertical>
-                </card>
-                
-                <card bg="#1a1a1a" padding="12">
-                    <vertical>
-                        <text text="已保存的钱包 (点击查看私钥)" textSize="14sp" textColor="#888888" marginBottom="8"/>
-                        <list id="walletList" h="250dp"/>
-                    </vertical>
-                </card>
-                
-                <text text="钱包保存在: /sdcard/ETH_Wallets.txt" textSize="11sp" textColor="#555555" gravity="center" marginTop="12"/>
-                <text text="提示: 点击悬浮窗可恢复主界面" textSize="10sp" textColor="#444444" gravity="center" marginTop="5"/>
-            </vertical>
+    <vertical bg="#000000">
+        <text text="ETH靓号生成器" textSize="24sp" textColor="#00FF00" gravity="center" margin="10dp"/>
+        
+        <text text="设置" textSize="16sp" textColor="#888888" margin="10dp,5dp"/>
+        
+        <horizontal>
+            <text text="前缀:" textSize="14sp" textColor="#FFF" w="60dp"/>
+            <input id="prefix" hint="1111" textSize="14sp" w="100dp"/>
+            <text text="后缀:" textSize="14sp" textColor="#FFF" w="60dp"/>
+            <input id="suffix" hint="8888" textSize="14sp" w="100dp"/>
+        </horizontal>
+        
+        <horizontal margin="10dp,5dp">
+            <text text="线程:" textSize="14sp" textColor="#FFF" w="60dp"/>
+            <input id="threads" text="64" textSize="14sp" w="80dp"/>
+        </horizontal>
+        
+        <horizontal margin="10dp,5dp">
+            <text id="generated" text="生成:0" textSize="14sp" textColor="#0F0" w="80dp"/>
+            <text id="checked" text="检查:0" textSize="14sp" textColor="#0F0" w="80dp"/>
+            <text id="found" text="发现:0" textSize="14sp" textColor="#FF0" w="80dp"/>
+            <text id="foundCount" text="钱包:0" textSize="14sp" textColor="#F80" w="80dp"/>
+        </horizontal>
+        
+        <horizontal margin="10dp,5dp">
+            <button id="startBtn" text="开始" textSize="18sp" w="100dp" h="50dp"/>
+            <button id="consoleBtn" text="控制台" textSize="14sp" w="80dp" h="50dp" margin="5dp"/>
+            <button id="floatyBtn" text="悬浮窗" textSize="14sp" w="80dp" h="50dp"/>
+        </horizontal>
+        
+        <text text="日志" textSize="14sp" textColor="#888" margin="10dp,5dp"/>
+        <scroll h="150dp">
+            <text id="logView" text="准备就绪..." textSize="11sp" textColor="#0F0"/>
         </scroll>
+        
+        <text text="已保存钱包" textSize="14sp" textColor="#888" margin="10dp,5dp"/>
+        <list id="walletList" h="150dp"/>
+        
+        <text text="保存:/sdcard/ETH_Wallets.txt" textSize="10sp" textColor="#555" gravity="center" margin="5dp"/>
     </vertical>
 );
 
@@ -493,7 +371,6 @@ ui.startBtn.on("click", () => {
         config.threads = parseInt(ui.threads.text()) || 64;
         if (config.threads < 1) config.threads = 1;
         if (config.threads > 128) config.threads = 128;
-        
         logs = [];
         startWorkers();
     } else {
@@ -504,35 +381,28 @@ ui.startBtn.on("click", () => {
 ui.consoleBtn.on("click", () => {
     if (console.isShowing()) {
         console.hide();
-        ui.consoleBtn.setText("显示控制台");
     } else {
         console.show();
-        ui.consoleBtn.setText("隐藏控制台");
     }
 });
 
 ui.floatyBtn.on("click", () => {
     if (isFloatyShown) {
         closeFloaty();
-        ui.floatyBtn.setText("显示悬浮窗");
     } else {
         createFloaty();
-        ui.floatyBtn.setText("隐藏悬浮窗");
     }
 });
 
 ui.walletList.on("item_click", (item, position) => {
     if (savedWallets[position]) {
-        var wallet = savedWallets[position];
-        dialogs.confirm("钱包信息", 
-            "地址: " + wallet.address + "\n\n" +
-            "余额: " + wallet.balance.toFixed(8) + " ETH\n\n" +
-            "时间: " + wallet.timestamp + "\n\n" +
-            "是否显示私钥?", 
+        var w = savedWallets[position];
+        dialogs.confirm("钱包#" + (position + 1), 
+            "地址: " + w.address + "\n余额: " + w.balance.toFixed(8) + " ETH\n时间: " + w.timestamp + "\n\n显示私钥?", 
             "显示", "取消"
         ).then(show => {
             if (show) {
-                dialogs.confirm("警告", "私钥一旦泄露将导致资产被盗！\n\n私钥: " + wallet.privateKey, "确认", "取消");
+                dialogs.alert("警告", "私钥泄露将导致资产被盗!\n\n私钥: " + w.privateKey);
             }
         });
     }
@@ -540,34 +410,24 @@ ui.walletList.on("item_click", (item, position) => {
 
 if (files.exists(files.getSdcardPath() + "/ETH_Wallets.txt")) {
     try {
-        var content = files.read(files.getSdcardPath() + "/ETH_Wallets.txt");
-        savedWallets = JSON.parse(content);
+        savedWallets = JSON.parse(files.read(files.getSdcardPath() + "/ETH_Wallets.txt"));
         logInfo("已加载 " + savedWallets.length + " 个钱包");
-        updateUI();
     } catch (e) {
-        logError("加载钱包失败: " + e.message);
         savedWallets = [];
     }
-} else {
-    logInfo("未找到已保存的钱包，将创建新文件");
 }
 
 setInterval(() => {
     if (stats.running) {
         updateUI();
-        if (isFloatyShown) {
-            updateFloatyText();
-        }
+        if (isFloatyShown) updateFloatyText();
     }
 }, 500);
 
 logInfo("ETH靓号生成器已就绪");
-logInfo("建议: 前缀设置2-4位数字更容易找到");
 
 events.on("exit", () => {
-    if (stats.running) {
-        stopWorkers();
-    }
+    if (stats.running) stopWorkers();
     saveWalletsNow();
     closeFloaty();
 });
