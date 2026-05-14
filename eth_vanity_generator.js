@@ -187,18 +187,18 @@ ui.layout(
                 <text text="靓号规则设置" textSize="16sp" textColor="#AAAAAA" marginBottom="8"/>
                 
                 <horizontal marginBottom="8">
-                    <text text="前缀: " textSize="14sp" textColor="#FFFFFF" width="60dp"/>
-                    <input id="prefix" hint="如: 1111" textSize="14sp" width="150dp"/>
+                    <text text="前缀: " textSize="14sp" textColor="#FFFFFF" w="60dp"/>
+                    <input id="prefix" hint="如: 1111" textSize="14sp" w="150dp"/>
                 </horizontal>
                 
                 <horizontal marginBottom="8">
-                    <text text="后缀: " textSize="14sp" textColor="#FFFFFF" width="60dp"/>
-                    <input id="suffix" hint="如: 1111" textSize="14sp" width="150dp"/>
+                    <text text="后缀: " textSize="14sp" textColor="#FFFFFF" w="60dp"/>
+                    <input id="suffix" hint="如: 1111" textSize="14sp" w="150dp"/>
                 </horizontal>
                 
                 <horizontal>
-                    <text text="线程: " textSize="14sp" textColor="#FFFFFF" width="60dp"/>
-                    <input id="threads" text="4" textSize="14sp" width="80dp"/>
+                    <text text="线程: " textSize="14sp" textColor="#FFFFFF" w="60dp"/>
+                    <input id="threads" text="4" textSize="14sp" w="80dp"/>
                 </horizontal>
             </vertical>
         </card>
@@ -211,23 +211,7 @@ ui.layout(
             </horizontal>
         </card>
         
-        <button id="startBtn" text="开始" textSize="18sp" width="match_parent" height="50dp" marginBottom="12"
-            onClick={() => {
-                if (!stats.running) {
-                    config.prefix = ui.prefix.getText().toString();
-                    config.suffix = ui.suffix.getText().toString();
-                    config.threads = parseInt(ui.threads.getText().toString()) || 4;
-                    stats.generated = 0;
-                    stats.checked = 0;
-                    stats.found = 0;
-                    logs = [];
-                    startWorkers();
-                    log("开始生成...");
-                } else {
-                    stopWorkers();
-                    log("已停止");
-                }
-            }}/>
+        <button id="startBtn" text="开始" textSize="18sp" w="*" h="50dp" marginBottom="12"/>
         
         <card backgroundColor="#2a2a2a" padding="12" marginBottom="12">
             <text text="日志" textSize="16sp" textColor="#AAAAAA" marginBottom="8"/>
@@ -238,7 +222,7 @@ ui.layout(
         
         <card backgroundColor="#2a2a2a" padding="12">
             <text text="已保存的钱包" textSize="16sp" textColor="#AAAAAA" marginBottom="8"/>
-            <list id="walletList" height="200dp"/>
+            <list id="walletList" h="200dp"/>
         </card>
         
         <text text="钱包保存在: /sdcard/ETH_Wallets.txt" textSize="12sp" textColor="#666666" gravity="center" marginTop="12"/>
@@ -247,6 +231,23 @@ ui.layout(
 
 ui.statusBarColor(0xFF1a1a1a);
 ui.backgroundColor(0xFF1a1a1a);
+
+ui.startBtn.on("click", () => {
+    if (!stats.running) {
+        config.prefix = ui.prefix.getText().toString();
+        config.suffix = ui.suffix.getText().toString();
+        config.threads = parseInt(ui.threads.getText().toString()) || 4;
+        stats.generated = 0;
+        stats.checked = 0;
+        stats.found = 0;
+        logs = [];
+        startWorkers();
+        log("开始生成...");
+    } else {
+        stopWorkers();
+        log("已停止");
+    }
+});
 
 if (files.exists(files.getSdcardPath() + "/ETH_Wallets.txt")) {
     try {
