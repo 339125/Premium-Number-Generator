@@ -19,11 +19,17 @@ var workers = [];
 console.show();
 console.hide();
 
+var lastLogTime = 0;
+
 function log(msg) {
-    console.log(msg);
+    var time = new Date().toLocaleTimeString();
+    var logMsg = "[" + time + "] " + msg;
+    console.log(logMsg);
     ui.post(() => {
         try {
-            ui.logView.setText(ui.logView.text() + "\n" + msg);
+            var text = ui.logView.text();
+            if (text.length > 5000) text = text.substring(text.length - 5000);
+            ui.logView.setText(text + "\n" + logMsg);
         } catch (e) {}
     });
 }
@@ -163,12 +169,22 @@ function stopWorkers() {
     log("已停止");
 }
 
+var lastGenerated = 0;
+
 function updateUI() {
     ui.post(() => {
         ui.gen.setText("生成:" + stats.generated);
         ui.chk.setText("检查:" + stats.checked);
         ui.fnd.setText("发现:" + stats.found);
         ui.wal.setText("钱包:" + savedWallets.length);
+        
+        var now = Date.now();
+        if (now - lastLogTime >= 3000 && stats.running) {
+            var speed = (stats.generated - lastGenerated) / 3;
+            lastGenerated = stats.generated;
+            lastLogTime = now;
+            log("统计: 生成=" + stats.generated + ", 检查=" + stats.checked + ", 发现=" + stats.found + ", 钱包=" + savedWallets.length + ", 速度=" + speed.toFixed(1) + "/秒");
+        }
     });
 }
 
