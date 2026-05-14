@@ -457,11 +457,11 @@ ui.layout(
                     </vertical>
                 </card>
                 
-                <linearlayout orientation="horizontal" marginBottom="12">
-                    <button id="startBtn" text="开始" textSize="20sp" w="120dp" h="60dp" marginRight="10dp"/>
-                    <button id="consoleBtn" text="控制台" textSize="16sp" w="100dp" h="60dp" marginRight="10dp"/>
-                    <button id="floatyBtn" text="悬浮窗" textSize="16sp" w="100dp" h="60dp"/>
-                </linearlayout>
+                <horizontal marginBottom="12">
+                    <button id="startBtn" text="开始" textSize="18sp" w="100dp" h="50dp" marginRight="10dp"/>
+                    <button id="consoleBtn" text="控制台" textSize="14sp" w="80dp" h="50dp" marginRight="10dp"/>
+                    <button id="floatyBtn" text="悬浮窗" textSize="14sp" w="80dp" h="50dp"/>
+                </horizontal>
                 
                 <card bg="#1a1a1a" padding="8" marginBottom="12">
                     <vertical>
